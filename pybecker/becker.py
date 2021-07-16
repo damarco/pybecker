@@ -31,7 +31,9 @@ COMMAND_CLEARPOS2 = 0x91
 COMMAND_CLEARPOS3 = 0x92
 COMMAND_CLEARPOS4 = 0x93
 
-DEFAULT_DEVICE_NAME = '/dev/serial/by-id/usb-BECKER-ANTRIEBE_GmbH_CDC_RS232_v125_Centronic-if00'
+DEFAULT_DEVICE_NAME = (
+    "/dev/serial/by-id/usb-BECKER-ANTRIEBE_GmbH_CDC_RS232_v125_Centronic-if00"
+)
 
 logging.basicConfig()
 _LOGGER = logging.getLogger(__name__)
@@ -45,7 +47,8 @@ class Becker:
         Use this class to perform operations on your Becker Shutter using a centronic USB Stick
         This class will as well maintain a call increment in an internal database
     """
-    def __init__(self, device_name=DEFAULT_DEVICE_NAME, init_dummy=False):
+
+    def __init__(self, device_name=DEFAULT_DEVICE_NAME, init_dummy=False, db_path=None):
         """
             Create a new instance of the Becker controller
 
@@ -58,7 +61,7 @@ class Becker:
         if self.is_serial and not os.path.exists(device_name):
             raise BeckerConnectionError(device_name + " is not existing")
         self.device = device_name
-        self.db = Database()
+        self.db = Database(path=db_path)
 
         # If no unit is defined create a dummy one
         units = self.db.get_all_units()
@@ -68,18 +71,20 @@ class Becker:
         try:
             self._connect()
         except serial.SerialException:
-            raise BeckerConnectionError("Error when trying to establish connection using " + device_name)
+            raise BeckerConnectionError(
+                "Error when trying to establish connection using " + device_name
+            )
 
     def _connect(self):
         if self.is_serial:
             self.s = serial.Serial(self.device, 115200, timeout=1)
             self.write_function = self.s.write
         else:
-            if ':' in self.device:
-                host, port = self.device.split(':', 1)
+            if ":" in self.device:
+                host, port = self.device.split(":", 1)
             else:
                 host = self.device
-                port = '5000'
+                port = "5000"
             self.s = socket.create_connection((host, port))
             self.write_function = self._reconnecting_sendall
 
@@ -164,14 +169,14 @@ class Becker:
             unit[1] += 1
 
         # append the release button code
-        #codes.append(generate_code(channel, unit, 0))
-        #unit[1] += 1
+        # codes.append(generate_code(channel, unit, 0))
+        # unit[1] += 1
 
         await self.write(codes)
         self.db.set_unit(unit, test)
 
     async def send(self, channel, cmd, test=False):
-        b = channel.split(':')
+        b = channel.split(":")
         if len(b) > 1:
             ch = int(b[1])
             un = int(b[0])
